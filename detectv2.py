@@ -5,6 +5,7 @@ import math
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
+import numpy as np
 from numpy import random
 
 from models.experimental import attempt_load
@@ -110,11 +111,11 @@ def detect(save_img=False):
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             
+            xyxy = [0,0,0,0]
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
                 
-
                 # Print results
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
@@ -122,6 +123,7 @@ def detect(save_img=False):
 
                 # Write results                                                                                          
                 for *xyxy, conf, cls in reversed(det):
+                    
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
@@ -131,6 +133,7 @@ def detect(save_img=False):
                     if save_img or view_img:  # Add bbox to image
                         label = f'{names[int(cls)]} {conf:.2f}'
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=1)
+                    
                 
             #infos
             #all the distance are pixels value
@@ -141,7 +144,7 @@ def detect(save_img=False):
             #vertical view = 1116.8         (took nearest value)
             #horizontal angle = 108°    #38.66   #77.32
             #vertical angle = 54°       #28.072     #56.144
-
+            
             ox = (xyxy[0]+xyxy[2])/2    #x location of bonded object
             oy = (xyxy[1]+xyxy[3])/2     #y location of bonded object
             # Print time (inference + NMS)
@@ -183,15 +186,15 @@ def detect(save_img=False):
                 #assuming that the camera is in right angle (actual angle 110)
                 #for ariel view (as the camera is not in the centre)
                 #to find out the distance between camera and the object's y location
-                height = 930   #we know already (centimetre but assuming as pixel value)
+                height = 740 #930   #we know already (centimetre but assuming as pixel value)
                 #to find width 
-                ydegree = 27.95
+                ydegree =  27.9#18.5 #27.95
                 pixely = (ydegree*2)/480         #28.072       #28. is good
 
-                smalltria = (height/math.sin(math.radians(73.072)))*math.sin(math.radians(90))               #change to radian (not)
+                smalltria = (height/math.sin(math.radians(72.9)))*math.sin(math.radians(90)) #73.072               #change to radian (not)
                 print("A =",smalltria)
                 
-                hipo = (smalltria/math.sin(math.radians(45)))*math.sin(math.radians(106.928))
+                hipo = (smalltria/math.sin(math.radians(45)))*math.sin(math.radians(107.1))  #106.928
                 print("hipo =", hipo)
                 
                 #base45 = (smalltria/math.sin(math.radians(45)))*math.sin(math.radians(37.5))
@@ -221,7 +224,7 @@ def detect(save_img=False):
                 print("hipoX =", hipoX)
 
 
-                pixelx = (42*2)/640         #38.66
+                pixelx = (34.12*2)/640       #42  #38.66
                 
                 if ox < 320:
                     z=320-ox
@@ -267,25 +270,27 @@ def detect(save_img=False):
                 else:
                     print("the object is on the left")
                 
-            else: 
-                print("no detect") #this thing is not working :'( (crush error when object is not detected)
+            if xyxy == [0,0,0,0]: 
+                print("No object detected") 
 
             # Stream results
             if view_img:
-                #cv2.line(frame, (639, 500), (60,50), (0,255,0), 2)
                 
-                #cam calibration
-                mtx = [[2.64631999e+03, 0.00000000e+00, 3.36832164e+02],
-                       [0.00000000e+00, 2.54355622e+03, 2.66395640e+02],
-                       [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]
-                
-                dist = [[-1.49406881e+01, 5.78476948e+02, 1.67321016e-02, -3.29108885e-02, -1.47916616e+04]]
+                #camera matrix
+                mtx = np.array([[482.82559214,   0,         316.84971798],
+                                [  0.  ,       474.26771942, 220.14107613],
+                                [  0.   ,        0.      ,     1.        ]])
 
-                cv2.imshow(str(p), im0)
+                #distortion coefficients
+                dist = np.array([-4.07062414e-01, 1.73160312e-01, 1.49009489e-02, 5.07985436e-06, -2.75905543e-02])
+                
+                #camera calibration method
+                im0 = cv2.undistort(im0, mtx, dist)
+
+                cv2.imshow(str(p), im0)             #camera output
                 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break  # 1 millisecond
-                
+                    break  # 1 millisecond       
 
             # Save results (image with detections)
             if save_img:
