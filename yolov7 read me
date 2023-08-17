@@ -1,5 +1,7 @@
 #object detection
 
+Change the detect.py to name.py 
+
 #camera
 python detect.py --weights weed.pt --conf 0.1 --img-size 640 --source 0
 
