@@ -15,6 +15,14 @@ from utils.generals import check_img_size, check_requirements, check_imshow, non
 from utils.plots import plot_one_box
 from utils.torch_utilss import select_device, load_classifier, time_synchronized, TracedModel
 
+                #camera matrix
+mtx = np.array( [[480  , 0.      ,   320],
+                [  0.      ,   480, 230],
+                [  0.      ,     0.     ,      1.        ]])
+
+                #distortion coefficients
+dist = np.array([-0.41125742 , 0.22848359, 0.01079013 , -0.001213,   -0.07934315])
+
 def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
@@ -82,7 +90,7 @@ def detect(save_img=False):
             old_img_w = img.shape[3]
             for i in range(3):
                 model(img, augment=opt.augment)[0]
-
+            
         # Inference
         t1 = time_synchronized()
         with torch.no_grad():   # Calculating gradients would cause a GPU memory leak
@@ -96,14 +104,15 @@ def detect(save_img=False):
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
-
+            im0 = cv2.undistort(im0, mtx, dist)
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
-                p, s, im0, frame = path[i], '%g: ' % i, im0s[i].copy(), dataset.count
+                p, s, im0, frame = path[i], '%g: ' % i, im0s[i].copy(), dataset.count   
            
             else:
                 p, s, im0, frame = path, '', im0s, getattr(dataset, 'frame', 0)
+                
                 
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # img.jpg
@@ -120,9 +129,9 @@ def detect(save_img=False):
             cv2.line(im0, (0, 120), (640,120), (0,255,0), 1)
             cv2.line(im0, (0, 180), (640,180), (0,255,0), 1)
             cv2.line(im0, (0, 360), (640,360), (0,255,0), 1)
-            
-            
-            if len(det):
+ 
+            if len(det):  
+                
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
                 
@@ -154,6 +163,9 @@ def detect(save_img=False):
             #vertical view = 1116.8         (took nearest value)
             #horizontal angle = 108°    #38.66   #77.32
             #vertical angle = 54°       #28.072     #56.144
+                    
+                    #camera calibration method
+                    #im0 = cv2.undistort(im0, mtx, dist)     
             
                     ox = (xyxy[0]+xyxy[2])/2    #x location of bonded object
                     oy = (xyxy[1]+xyxy[3])/2     #y location of bonded object
@@ -187,15 +199,15 @@ def detect(save_img=False):
                         #assuming that the camera is in right angle (actual angle 110)
                         #for ariel view (as the camera is not in the centre)
                         #to find out the distance between camera and the object's y location
-                        height = 670 #930   #we know already (centimetre but assuming as pixel value)
+                        height = 930 #930   #we know already (centimetre but assuming as pixel value)
                         #to find width 
-                        ydegree =  28 #27.9#18.5 #27.95
+                        ydegree =  25.115 #27.9#18.5 #27.95
                         pixely = (ydegree*2)/480         #28.072       #28. is good
 
-                        smalltria = (height/math.sin(math.radians(72)))*math.sin(math.radians(90)) #73.072               #change to radian (not)
+                        smalltria = (height/math.sin(math.radians(ydegree + 45)))*math.sin(math.radians(90)) #73.072               #change to radian (not)
                         print("A =",smalltria)
                         
-                        hipo = (smalltria/math.sin(math.radians(45)))*math.sin(math.radians(108))  #106.928
+                        hipo = (smalltria/math.sin(math.radians(45)))*math.sin(math.radians(180 - (ydegree + 45)))  #106.928
                         print("hipo =", hipo)
                         
                         #base45 = (smalltria/math.sin(math.radians(45)))*math.sin(math.radians(37.5))
@@ -212,20 +224,23 @@ def detect(save_img=False):
                         bigangle = 180 - (ydegree + 45)
                         
                         smallangle = bigangle - 90
-                        nonCamBase = (smalltria/math.sin(math.radians(90)))*math.sin(math.radians(smallangle))
+                        nonCamBase = (height/math.sin(math.radians(ydegree+45)))*math.sin(math.radians(smallangle))
+                        #nonCamBase = 270
                         print("non-Camera-base =", nonCamBase)
 
-                        y = 480-oy
-                        baseX = (smalltria/math.sin(math.radians(73.072-(y*pixely))))*math.sin(math.radians(y*pixely))
-                        print("baseX =",baseX + nonCamBase)
+                        y = oy
+                        baseX = (smalltria/math.sin(math.radians((ydegree+45)-(y*pixely))))*math.sin(math.radians(y*pixely))
+                        allbase = baseX + nonCamBase
+                        cal_allbase = (allbase - 63.4)/0.965
+                        print("All base =",cal_allbase)
 
                         #for horizontal 
 
                         hipoX = (smalltria/math.sin(math.radians(73.072-(y*pixely))))*math.sin(math.radians(106.928))
                         print("hipoX =", hipoX)
 
-
-                        pixelx = (34.12*2)/640       #42  #38.66
+                        xdegree = 31.574
+                        pixelx = (xdegree*2)/640       #42  #38.66
                         
                         if ox < 320:
                             z=320-ox
@@ -278,21 +293,36 @@ def detect(save_img=False):
                         if xyxy == [0,0,0,0]:                   #if there is no object
                             print("No object detected") 
 
-                        cv2.putText(im0, str(camobjdis)+"mm", (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)        #will print the location on camera output
-            
+                        #cv2.putText(im0, str(y)+" "+str(cal_allbase)+"mm", (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output
+                        cv2.putText(im0, str(y), (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output
             # Stream results
-            if view_img:
-                
+            #if view_img:
+
                 #camera matrix
-                mtx = np.array([[482.82559214,   0         ,  316.84971798],
-                                [  0.  ,       474.26771942, 220.14107613],
-                                [  0.   ,        0.        ,   1.        ]])
+                #mtx = np.array( [[480  , 0.      ,   320],
+                #                [  0.      ,   480, 230],
+                #                [  0.      ,     0.     ,      1.        ]])
 
                 #distortion coefficients
-                dist = np.array([-4.07062414e-01, 1.73160312e-01, 1.49009489e-02, 5.07985436e-06, -2.75905543e-02])
+                #dist = np.array([-0.41125742 , 0.22848359, 0.01079013 , -0.001213,   -0.07934315])
+                
+                        #Camera matrix:
+                         #   [[481.17788042   0.         315.38472983]
+                          #  [  0.         482.880315   222.32234166]
+                           # [  0.           0.           1.        ]]
+                            #Distortion coefficients:
+                            #[[-0.41094158  0.20597747  0.01079013  0.00106996 -0.05974345]]
                 
                 #camera calibration method
-                im0 = cv2.undistort(im0, mtx, dist)
+                #im0 = cv2.undistort(im0, mtx, dist)
+
+                cv2.line(im0, (320, 0), (320,480), (0,255,0), 1)
+                cv2.line(im0, (160, 0), (160,480), (0,255,0), 1)
+                cv2.line(im0, (480, 0), (480,480), (0,255,0), 1)
+                cv2.line(im0, (0, 240), (640,240), (0,255,0), 1)
+                cv2.line(im0, (0, 120), (640,120), (0,255,0), 1)
+                cv2.line(im0, (0, 180), (640,180), (0,255,0), 1)
+                cv2.line(im0, (0, 360), (640,360), (0,255,0), 1)
 
                 cv2.imshow(str(p), im0)             #camera output
                 
