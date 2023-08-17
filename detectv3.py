@@ -293,28 +293,10 @@ def detect(save_img=False):
                         if xyxy == [0,0,0,0]:                   #if there is no object
                             print("No object detected") 
 
-                        #cv2.putText(im0, str(y)+" "+str(cal_allbase)+"mm", (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output
+                        cv2.putText(im0, str(y)+" "+str(cal_allbase)+"mm", (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output
                         cv2.putText(im0, str(y), (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output
+                        
             # Stream results
-            #if view_img:
-
-                #camera matrix
-                #mtx = np.array( [[480  , 0.      ,   320],
-                #                [  0.      ,   480, 230],
-                #                [  0.      ,     0.     ,      1.        ]])
-
-                #distortion coefficients
-                #dist = np.array([-0.41125742 , 0.22848359, 0.01079013 , -0.001213,   -0.07934315])
-                
-                        #Camera matrix:
-                         #   [[481.17788042   0.         315.38472983]
-                          #  [  0.         482.880315   222.32234166]
-                           # [  0.           0.           1.        ]]
-                            #Distortion coefficients:
-                            #[[-0.41094158  0.20597747  0.01079013  0.00106996 -0.05974345]]
-                
-                #camera calibration method
-                #im0 = cv2.undistort(im0, mtx, dist)
 
                 cv2.line(im0, (320, 0), (320,480), (0,255,0), 1)
                 cv2.line(im0, (160, 0), (160,480), (0,255,0), 1)
