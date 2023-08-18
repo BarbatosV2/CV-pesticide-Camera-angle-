@@ -293,8 +293,8 @@ def detect(save_img=False):
                         if xyxy == [0,0,0,0]:                   #if there is no object
                             print("No object detected") 
 
-                        cv2.putText(im0, str(y)+" "+str(cal_allbase)+"mm", (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output
-                        cv2.putText(im0, str(y), (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output
+                        cv2.putText(im0, str(y)+" "+str(cal_allbase)+"mm", (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output (mm value)
+                        cv2.putText(im0, str(y), (int(ox),int(oy)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255,0,0), 1)        #will print the location on camera output (pixel value)
                         
             # Stream results
 
@@ -333,7 +333,7 @@ def detect(save_img=False):
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(im0)
                     
-        if cv2.waitKey(1) & 0xFF == ('q'):
+        if cv2.waitKey(1) & 0xFF == ('q'):          #press q will quit the camera and save the result
             break
 
     if save_txt or save_img:
