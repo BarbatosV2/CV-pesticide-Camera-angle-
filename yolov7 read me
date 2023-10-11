@@ -1,3 +1,6 @@
+###########THIS CODE IS USED WITH YOLOV7###########
+#REPLACE THE detect.py WITH THIS CODE#
+
 #object detection
 
 Change the detect.py to name.py 
