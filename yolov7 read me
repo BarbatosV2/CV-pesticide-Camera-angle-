@@ -20,4 +20,4 @@ python detect.py --weights weed.pt --conf 0.25 --img-size 640 --source inference
 
 python train.py --workers 1 --device 0 --batch-size 2 --data data/custom.yaml --img 640 640 --cfg cfg/training/yolov7custom.yaml --weights '' --name customyolov7 --hyp data/hyp.scratch.p5.yaml
 
-
+python train.py --workers 8 --device 0 --batch-size 2 --data data/laser_weed.yaml --img 640 640 --cfg cfg/training/laser_weed.yaml --weights '' --name laserweedv5 --hyp data/hyp.scratch.p5.yaml    #better to train with this for accuracy
